@@ -29,7 +29,7 @@ def main():
 
     if __name__ == '__main__':
         parser = argparse.ArgumentParser(description='AQI 資料查詢 CLI')
-        parser.add_argument('-c', '--county', '--county', dest='county', help='過濾縣市名稱', default=None)
+        parser.add_argument('-c', '--county', dest='county', help='過濾縣市名稱', default=None)
         parser.add_argument('--file', '-f', help='JSON 檔案路徑', default='aqx_p_488.json')
         args = parser.parse_args()
 
@@ -45,7 +45,7 @@ def main():
     #     print(f"站點名稱: {site.sitename}, 所在縣市: {site.county}, AQI: {site.aqi}, 主要污染物: {site.pollutant}")         
 
 # 定義一個函數來解析 JSON 檔案並返回 Site 物件的列表
-def parse_sites_from_json(json_file):
+def parse_sites_from_json(json_file : str) -> list[Site]: 
 
     # 打開並讀取 JSON 檔案
     with open(json_file, 'r', encoding='utf-8') as file:
