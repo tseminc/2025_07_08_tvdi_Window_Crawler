@@ -1,10 +1,17 @@
 import asyncio
-from crawl4ai import AsyncWebCrawler, BrowserConfig, CrawlerRunConfig, CacheMode, JsonCssExtractionStrategy
+import json
+from crawl4ai import (AsyncWebCrawler,
+                      BrowserConfig,
+                      CrawlerRunConfig,
+                      CacheMode,
+                      JsonCssExtractionStrategy,
+                      SemaphoreDispatcher,RateLimiter,
+                      )
 
-async def main():
-    url = 'https://www.wantgoo.com/stock/2317/technical-chart'
+async def get_stock_data(urls)-> list[dict]:
     #建立一個BrowserConfig,讓chromium的瀏覽器顯示
     #BrowserConfig實體
+
     browser_config = BrowserConfig(
         headless=True
     )
@@ -86,13 +93,26 @@ async def main():
         extraction_strategy=JsonCssExtractionStrategy(stock_schema),
         verbose=True
     )
+
+    dispatcher = SemaphoreDispatcher(
+        semaphore_count=5,
+        rate_limiter=RateLimiter(
+            base_delay=(0.5, 1.0),
+            max_delay=10.0
+        )
+    )
+
     # 使用AsyncWebCrawler的實體來爬取網頁
     # 加入run_config參數
     async with AsyncWebCrawler(config=browser_config) as crawler:
-        result = await crawler.arun(url=url,config=run_config)
-    
-    print(result.extracted_content) 
+        results = await crawler.arun_many(
+            urls=urls,
+            config=run_config,
+            dispatcher=dispatcher,
+            )
+    all_results:list[dict] = []
+    for result in results:
+        stack_data:list[dict] = json.loads(result.extracted_content)
+        all_results.append(stack_data[0])
 
-if __name__ == '__main__':
-    asyncio.run(main())
-    
+    return all_results
