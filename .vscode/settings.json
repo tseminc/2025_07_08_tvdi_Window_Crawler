@@ -1,6 +1,10 @@
 {
     "search.showLineNumbers": false,
-    "json.schemas": [
-        
-    ]
+    "json.schemas": [],
+    // 1. 指定預設的 Python 解釋器路徑
+    //    將路徑指向你的 'web_crawler' 環境中的 python.exe
+    //    在 JSON 檔案中，Windows 路徑的反斜線 "\" 需要寫成 "\\'
+    "python.defaultInterpreterPath": "C:\\Users\\User\\miniconda3\\envs\\web_crawler\\python.exe",
+    // 2. (關鍵設定) 告訴 VS Code 的 Python 擴充功能，在開啟終端機時要自動啟用所選環境
+    "python.terminal.activateEnvironment": true
 }
