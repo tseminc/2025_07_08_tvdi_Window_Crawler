@@ -1,7 +1,7 @@
 import tkinter as tk
 import asyncio
+import threading
 import wantgoo
-
 
 class SimpleApp:
     def __init__(self, root):
@@ -14,11 +14,12 @@ class SimpleApp:
             self.stock_codes = []
             print(f"取得股票資料時發生錯誤: {e}")
 
+        self.selected_stocks: list[str] = []
 
         self.create_widgets()
 
     def create_widgets(self):
-        self.label = tk.Label(self.root, text="即時股票資訊", font=("Arial", 20, "bold"))
+        self.label= tk.Label(self.root, text="即時股票資訊", font=("Arial", 20, "bold"))
         self.label.pack(pady=20)        
         
         # 建立root_left_frame來包含左側的內容 
@@ -48,9 +49,13 @@ class SimpleApp:
         #抓取stock_listbox的選取事件
         self.stock_listbox.bind('<<ListboxSelect>>', self.on_stock_select)
         
-        # 手動插入股票資料
+        # 用一個 list 存原始股票資料，避免名稱有 '-' 造成 split 問題
+        self.stock_display_list = []
         for stock in self.stock_codes:
-            self.stock_listbox.insert(tk.END, f"{stock['code']} - {stock['name']}")
+            display_text = f"{stock['code']} - {stock['name']}"
+            self.stock_display_list.append(stock)  # 保留原始 dict
+            self.stock_listbox.insert(tk.END, display_text)
+            #self.stock_listbox.insert(tk.END, f"{stock['code']} - {stock['name']}")
             
         self.stock_listbox.pack(side=tk.LEFT)
         self.scrollbar.config(command=self.stock_listbox.yview)
@@ -67,49 +72,38 @@ class SimpleApp:
         # 增加self.selected_button按鈕click功能
         self.selected_button = tk.Button(
             root_right_frame,
-            text=f'選取的股票數量是:{0:3}筆',
-            font=("Arial", 12, "bold"))
+            text="選取的股票數量是0筆",
+            font=("Arial", 12, "bold"),
+            state=tk.DISABLED,
+            command=lambda: threading.Thread(target=self.start_crawling).start()
+        )
         self.selected_button.pack(pady=10, padx=10, fill=tk.X, expand=True)
-        self.selected_button.config(state=tk.DISABLED)
-        self.selected_button.bind("<Button-1>", self.start_crawling)
-
     def on_stock_select(self, _=None):
         """當股票被選取時，更新右側顯示的資訊"""
-        self.selected_stocks = [self.stock_listbox.get(i) for i in self.stock_listbox.curselection()]        
-        self.selected_button.config(text=f"選取的股票數量是:{len(self.selected_stocks) : 3}筆")
+        # 直接用 index 取得原始 dict
+        self.selected_stocks = [self.stock_display_list[i] for i in self.stock_listbox.curselection()]
+        self.selected_button.config(text=f"選取的股票數量是:{len(self.selected_stocks)}筆")
         if len(self.selected_stocks) == 0:
             self.selected_button.config(state=tk.DISABLED)
         else:
             self.selected_button.config(state=tk.NORMAL)
-
-    def on_selected_button_click(self):
-                
-        """當股票被選取時，更新右側顯示的資訊"""
-        self.selected_stocks = [self.stock_listbox.get(i) for i in self.stock_listbox.curselection()]        
-        self.selected_button.config(text=f"選取的股票數量是:{len(self.selected_stocks) : 3}筆")
-        if len(self.selected_stocks) == 0:
-            self.selected_button.config(state=tk.DISABLED)
-        else:
-            self.selected_button.config(state=tk.NORMAL)
-
-
-    def clear_selection(self):
-        """清除選取的股票資訊"""
-        self.stock_listbox.selection_clear(0, tk.END)
-        self.selected_button.config(state=tk.DISABLED)
-        self.on_stock_select()  # 更新右側顯示的資訊
-
     def start_crawling(self, event=None):
         """開始爬蟲"""
         # 在這裡可以加入爬蟲邏輯
         # 例如: wantgoo.crawl_stocks(self.selected_stocks)
-        urls:list[str] = []
-        for info in self.selected_stocks:
-            code, name = info.split(' - ')
+        urls: list[str] = []
+        for stock in self.selected_stocks:
+            code = stock['code']
             url_template = f'https://www.wantgoo.com/stock/{code}/technical-chart'
             urls.append(url_template)
         result:list[dict] = asyncio.run(wantgoo.get_stock_data(urls))
         print(f"爬取到的股票資料: {result}")
+
+    def clear_selection(self):
+        """清除選取的股票"""
+        self.stock_listbox.selection_clear(0, tk.END)
+        self.selected_stocks = []
+        self.selected_button.config(text="選取的股票數量是0筆", state=tk.DISABLED)
 
 
 
